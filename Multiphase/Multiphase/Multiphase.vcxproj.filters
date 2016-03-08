@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{1a4a4da4-ea50-43e0-a93d-eaf03e571f62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="radixsort">
+      <UniqueIdentifier>{03d3c7d4-7d11-462f-be0e-7d704060aba1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{dd3242c7-269a-4533-b586-176cc9467836}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{8f578ac2-9896-4e8e-9cef-b95bb9aa6a61}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cubevertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="loadshader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mymesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="spray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="spray_k.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="radixsort.cuh">
+      <Filter>radixsort</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="radixsort.cu">
+      <Filter>radixsort</Filter>
+    </CudaCompile>
+    <CudaCompile Include="spray.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="spray_k.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="spray_thrust.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="radixsort_kernel.cu">
+      <Filter>radixsort</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="grid.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="grid.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="particle.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="particle.vert">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="loadshader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadSolidData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mymesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="spray.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

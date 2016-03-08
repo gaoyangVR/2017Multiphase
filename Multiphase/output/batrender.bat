@@ -1,0 +1,5 @@
+"C:\Program Files\POV-Ray\v3.7\bin\pvengine.exe" /EXIT /RENDER "D:\study\self_paper\fourth paper\MultiphaseSVN\output\povraymeltandboil/initfileVideo.ini"
+"C:\Program Files\POV-Ray\v3.7\bin\pvengine.exe" /EXIT /RENDER "D:\study\self_paper\fourth paper\MultiphaseSVN\output\povrayfreezing/initfileParticle.ini"
+"C:\Program Files\POV-Ray\v3.7\bin\pvengine.exe" /EXIT /RENDER "D:\study\self_paper\fourth paper\MultiphaseSVN\output\povrayinteraction/initfileVideo.ini"
+"C:\Program Files\POV-Ray\v3.7\bin\pvengine.exe" /EXIT /RENDER "D:\study\self_paper\fourth paper\MultiphaseSVN\output\povraymeltingpour/initfileVideo.ini"
+"C:\Program Files\POV-Ray\v3.7\bin\pvengine.exe" /EXIT /RENDER "D:\study\self_paper\fourth paper\MultiphaseSVN\output\povraymeltingpour/initfileParticle.ini"
