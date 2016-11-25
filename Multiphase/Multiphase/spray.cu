@@ -26,7 +26,7 @@ void cspray::initmem_bubble()
 	copyNXNYNZtoGPU(NX, NY, NZ);
 
 	//press
-	int gsmemsize = sizeof(float)*hparam.gnum;
+	int gsmemsize = sizeof(float)*hparam.gnum; 
 	cudaMalloc((void**)&mpress.data, gsmemsize);
 	cudaMalloc((void**)&temppress.data, gsmemsize);
 	cudaMemset(mpress.data, 0, gsmemsize);
@@ -197,7 +197,7 @@ void cspray::initmem_bubble()
 	cudaMalloc((void**)&dseedcell, sizeof(int)*seednum);
 
 	cudaThreadSynchronize();
-	getLastCudaError("Kernel execution failed");
+	getLastCudaError("Kernel execution failed 200");
 
 	//for CPU computation.
 	hparLHeat = new float[parNumMax];
@@ -390,82 +390,116 @@ void cspray::addexternalforce()
 	// 	cudaThreadSynchronize();
 }
 
-void cspray::initparticle_solidCoupling()
+void cspray::initparticle_solidCoupling()///////////////////initparticle
 {
+
+
 	if (parNumNow <= 0)
 		return;
+	float3* hparpos;
+	float3* hparvel;
+	float* hparmass;
+	char* hparflag;
 
-	float3* hparpos = new float3[parNumNow];//粒子位置
-	float3* hparvel = new float3[parNumNow];//粒子速度
-	float* hparmass = new float[parNumNow];//粒子质量
-	char* hparflag = new char[parNumNow];	//粒子标记
+	if (!m_bBottomParticel)
+	{
+		 hparpos = new float3[parNumNow];//粒子位置
+		 hparvel = new float3[parNumNow];//粒子速度
+		 hparmass = new float[parNumNow];//粒子质量
+		 hparflag = new char[parNumNow];	//粒子标记
+	}
 	float x, y, z;
 
 	int i = 0, ParNumPerLevel = 0;
-	for (float z = hparam.cellsize.x + hparam.samplespace; z<0.8f * NZ*hparam.cellsize.x && i + ParNumPerLevel<initfluidparticle; z += hparam.samplespace)
-	{
-		// 		for( float y = hparam.cellsize.x+hparam.samplespace; y<hparam.cellsize.x*(0.7*NY-1)-0.5f*hparam.samplespace && i<initfluidparticle; y+=hparam.samplespace )
-		// 			for( float x = hparam.cellsize.x+hparam.samplespace; x<hparam.cellsize.x*(0.7*NX-1)-0.5f*hparam.samplespace && i<initfluidparticle; x+=hparam.samplespace )
-		// 			{
-		for (float y = hparam.cellsize.x + hparam.samplespace; y<hparam.cellsize.x*(NY - 1) - 0.5f*hparam.samplespace && i<initfluidparticle; y += hparam.samplespace)
-		for (float x = hparam.cellsize.x + hparam.samplespace; x<hparam.cellsize.x*(NX - 1) - 0.5f*hparam.samplespace && i<initfluidparticle; x += hparam.samplespace)
+
+
+	if (!m_bBottomParticel)
+  	for (float z = hparam.cellsize.x + hparam.samplespace; z<0.8f * NZ*hparam.cellsize.x && i + ParNumPerLevel<initfluidparticle; z += hparam.samplespace)
+  	{
+  		// 		for( float y = hparam.cellsize.x+hparam.samplespace; y<hparam.cellsize.x*(0.7*NY-1)-0.5f*hparam.samplespace && i<initfluidparticle; y+=hparam.samplespace )
+  		// 			for( float x = hparam.cellsize.x+hparam.samplespace; x<hparam.cellsize.x*(0.7*NX-1)-0.5f*hparam.samplespace && i<initfluidparticle; x+=hparam.samplespace )
+  		// 			{
+  		for (float y = hparam.cellsize.x + hparam.samplespace; y<hparam.cellsize.x*(NY - 1) - 0.5f*hparam.samplespace && i<initfluidparticle; y += hparam.samplespace)
+  		for (float x = hparam.cellsize.x + hparam.samplespace; x<hparam.cellsize.x*(NX - 1) - 0.5f*hparam.samplespace && i<initfluidparticle; x += hparam.samplespace)
 		{
-			hparpos[i] = make_float3(x, y, z);
-			hparvel[i] = make_float3(0.0f);
-			hparmass[i] = hparam.m0;
-			hparflag[i] = TYPEFLUID;
-			++i;
-		}
-		if (ParNumPerLevel == 0) ParNumPerLevel = i;
-	}
+		
+				hparpos[i] = make_float3(x, y, z);
+				hparvel[i] = make_float3(0.0f);
+				hparmass[i] = hparam.m0;
+				hparflag[i] = TYPEFLUID;
+				++i;
+			
+
+  		}
+ 		if (ParNumPerLevel == 0) ParNumPerLevel = i;
+ 	}
 
 	float scale = 50;
 	if (mscene == SCENE_FREEZING || mscene == SCENE_MELTINGPOUR) scale = 80;
 	if (mscene == SCENE_INTERACTION) scale = 60;
 	if (mscene == SCENE_MELTANDBOIL_HIGHRES || mscene == SCENE_INTERACTION_HIGHRES) scale = 100;
+	if (mscene == SCENE_ALL) scale = 80;
+
+
+	
 
 	if (m_bSolid)
 	{
-		for (int j = 0; j<nInitSolPoint; j++)
+		for (int j = 0; j < nInitSolPoint; j++)
 		{
-			x = float(SolpointPos[j][0]), y = float(SolpointPos[j][1]), z = float(SolpointPos[j][2]);
-			hparpos[i] = hparam.samplespace*make_float3(x, y, z)*scale + solidInitPos;
-			hparvel[i] = make_float3(0.0f);		//	
-			hparmass[i] = hparam.m0*0.8f;
-			hparflag[i] = TYPESOLID;	//类型是固体
-
+			if (!m_bBottomParticel)
+			{
+				x = float(SolpointPos[j][0]), y = float(SolpointPos[j][1]), z = float(SolpointPos[j][2]);
+				hparpos[i] = hparam.samplespace*make_float3(x, y, z)*scale + solidInitPos;
+				hparvel[i] = make_float3(0.0f);		//	
+				hparmass[i] = hparam.m0*0.8f;
+				if ( mscene==SCENE_ALL ) hparmass[i] = hparam.m0*0.80f;
+				hparflag[i] = TYPESOLID;	//类型是固体
+			}
 			++i;
 		}
 	}
-	parNumNow = i;
 
-	cudaMemcpy(mParPos, hparpos, sizeof(float3)*parNumNow, cudaMemcpyHostToDevice);
-	cudaMemcpy(mParVel, hparvel, sizeof(float3)*parNumNow, cudaMemcpyHostToDevice);
-	cudaMemcpy(parmass, hparmass, sizeof(float)*parNumNow, cudaMemcpyHostToDevice);
-	cudaMemcpy(parflag, hparflag, sizeof(char)*parNumNow, cudaMemcpyHostToDevice);
+	parNumNow = i;	// 乜有流体的话就是solid的个数
+	if (m_bBottomParticel)
+	markgird_terrain();
+	else
+	{
+		cudaMemcpy(mParPos, hparpos, sizeof(float3)*parNumNow, cudaMemcpyHostToDevice);
+		cudaMemcpy(mParVel, hparvel, sizeof(float3)*parNumNow, cudaMemcpyHostToDevice);
+		cudaMemcpy(parmass, hparmass, sizeof(float)*parNumNow, cudaMemcpyHostToDevice);
+		cudaMemcpy(parflag, hparflag, sizeof(char)*parNumNow, cudaMemcpyHostToDevice);
+	
+		delete[] hparpos;
+		delete[] hparvel;
+		delete[] hparmass;
+		delete[] hparflag;
+	}
+	
+	
 
-	delete[] hparpos;
-	delete[] hparvel;
-	delete[] hparmass;
-	delete[] hparflag;
+
 }
 
 void cspray::markgrid()
 {
-	markair << <gsblocknum, threadnum >> >(mmark);
-	cudaThreadSynchronize();
-	getLastCudaError("Kernel execution failed");
+	//markair << <gsblocknum, threadnum >> >(mmark);
+	//cudaThreadSynchronize();
+	//getLastCudaError("Kernel execution failed");
 
-	//markfluid<<<pblocknum, threadnum>>>( mmark, mParPos, parflag, parNumNow );
-	//todo: 这里可能有问题！！！
-	//markfluid_GY<<<pblocknum, threadnum>>>( mmark, mParPos, parflag, parNumNow );
-	markfluid << <pblocknum, threadnum >> >(mmark, mParPos, parflag, parNumNow);
-	cudaThreadSynchronize();
-	getLastCudaError("Kernel execution failed");
+	////markfluid<<<pblocknum, threadnum>>>( mmark, mParPos, parflag, parNumNow );
+	////todo: 这里可能有问题！！！
+	////markfluid_GY<<<pblocknum, threadnum>>>( mmark, mParPos, parflag, parNumNow );
+	//markfluid << <pblocknum, threadnum >> >(mmark, mParPos, parflag, parNumNow);
+	//cudaThreadSynchronize();
+	//getLastCudaError("Kernel execution failed");
 
-	if (bCouplingSphere)
+	
+	if (mscene == SCENE_ALL)
 	{
-		markSolid_sphere << <gsblocknum, threadnum >> >(solidInitPos, sphereradius, mmark);
+		
+			markSolid_terrain << <gsblocknum, threadnum >> >(mmark, mark_terrain);
+		
 		cudaThreadSynchronize();
 		getLastCudaError("Kernel execution failed");
 	}
@@ -758,6 +792,8 @@ void cspray::runMC_interaction()
 		//output
 		if (boutputpovray && mframe%outputframeDelta == 0)
 			outputPovRaywater(mframe / outputframeDelta, solidvertex, solidnormal, solidvertexnum, solidindices, solidindicesnum, "solid");
+		if (boutputobj && mframe%outputframeDelta == 0)
+			outputOBJwater(mframe / outputframeDelta, solidvertex, solidnormal, solidvertexnum, solidindices, solidindicesnum, "solid");
 	}
 	else
 		runMC_smooth("solid", TYPESOLID);
@@ -820,6 +856,8 @@ void cspray::runMC_smooth(const char* objectname, char MCParType)
 
 		if (boutputpovray && mframe%outputframeDelta == 0)
 			outputPovRaywater(mframe / outputframeDelta, NULL, NULL, 0, NULL, 0, objectname);
+		if (boutputobj && mframe%outputframeDelta == 0)
+			outputOBJwater(mframe / outputframeDelta, NULL, NULL, 0, NULL, 0, objectname);
 		return;
 	}
 
@@ -913,8 +951,10 @@ void cspray::runMC_smooth(const char* objectname, char MCParType)
 		//output
 		if (boutputpovray && mframe%outputframeDelta == 0)
 			outputPovRaywater(mframe / outputframeDelta, d_pos, d_normal, totalVerts, d_indices, totalIndices, objectname);
+		if (boutputobj && mframe%outputframeDelta == 0)
+			outputOBJwater(mframe / outputframeDelta, d_pos, d_normal, totalVerts, d_indices, totalIndices, objectname);
 
-		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES || mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES) && objectname == "solid")
+		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES || mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES ||mscene==SCENE_ALL) && objectname == "solid")
 		{
 			if (totalVerts>maxsolidvert || totalIndices>maxsolidtri * 3)		//mem is not enough, error.
 			{
@@ -1266,7 +1306,7 @@ void cspray::ComputeTriangleHashSize(myMesh &mesh)
 	//1. 把场景中的小三角形hash起来
 	int numFaces = mesh.m_nFaces;
 	int nGridDim = (int)ceil(((float)numFaces) / threadnum);
-
+	
 	float* dMaxLength, *hHashSize;
 	checkCudaErrors(cudaMalloc((void**)&dMaxLength, sizeof(float)*nGridDim));
 	hHashSize = new float[nGridDim];
@@ -1274,7 +1314,7 @@ void cspray::ComputeTriangleHashSize(myMesh &mesh)
 	createAABB_q << <nGridDim, threadnum >> >(mesh.m_dPoints,
 		mesh.m_nPoints, mesh.m_dFaces, numFaces, dMaxLength, mesh.m_dHashPointsForFaces);
 	cudaThreadSynchronize();
-	getLastCudaError("Kernel execution failed");
+	getLastCudaError("Kernel execution failed!!!");
 
 	//2. 计算三角形Hash网格的大小 
 	cudaMemcpy(hHashSize, dMaxLength, sizeof(float)*nGridDim, cudaMemcpyDeviceToHost);
@@ -1731,7 +1771,7 @@ void cspray::advect_bubble()
 		waterux, wateruy, wateruz, airux, airuy, airuz, hparam.dt, parflag, velmode);
 
 	cudaThreadSynchronize();
-	getLastCudaError("Kernel execution failed");
+	getLastCudaError("Kernel execution failed advect bubble");
 	printTime(m_bCPURun, "advect_bubble", time);
 }
 
@@ -1893,7 +1933,7 @@ void cspray::updateTemperature()
 	}
 
 	//5. map heat from grid to particle
-	if (mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES)
+	if (mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES ||mscene== SCENE_ALL)
 		mapHeatg2p_MeltAndBoil << <pblocknum, threadnum >> >(mParPos, parflag, parTemperature, parNumNow, Tp_save, Tp, defaultSolidT, alphaTempTrans);
 	else
 		mapHeatg2p << <pblocknum, threadnum >> >(mParPos, parflag, parTemperature, parNumNow, Tp_save, Tp, defaultSolidT, alphaTempTrans);
@@ -2037,7 +2077,7 @@ void cspray::correctpos_bubble()
 	cudaMemset(dphi, 0, parNumNow*sizeof(float));
 
 
-	if (mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES || mscene == SCENE_INTERACTION)
+	if (mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES || mscene == SCENE_INTERACTION || mscene==SCENE_ALL)
 	{
 		computePhigra << <gsblocknum, threadnum >> >(phigrax_air, phigray_air, phigraz_air, lsair);
 		correctbubblepos_air << <pblocknum, threadnum >> >(lsmerge, phigrax, phigray, phigraz, lsair, phigrax_air, phigray_air, phigraz_air,
@@ -2266,6 +2306,69 @@ void cspray::outputPovRaywater(int frame, float3* dpos, float3 *dnormal, int pnu
 
 	fclose(fp);
 }
+
+void cspray::outputOBJwater(int frame, float3* dpos, float3 *dnormal, int pnum, uint *dindices, int indicesnum, const char* objectname)
+{
+	//filename
+	static char filename[100];
+	sprintf(filename, "%swaterOBJdata\\%s%05d.obj", outputdir, objectname, frame);
+	FILE *fp = fopen(filename, "w");
+	if (fp == NULL)
+	{
+		printf("cannot open obj file waterOBJdata for output here!!\n");
+		mpause = true;
+		return;
+	}
+
+	//如果没有MC三角形，则只引用头文件且输出
+	if (pnum == 0)
+	{
+		fclose(fp);
+		return;
+	}
+
+	fprintf(fp, "#obj model\n");
+	fprintf(fp, "#vertex_vectors\n");
+//	fprintf(fp, "%d,\n", pnum);
+
+	// vertex positions
+	static float3* hpos = new float3[maxVerts];
+	cudaMemcpy(hpos, dpos, pnum*sizeof(float3), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < pnum; i++)
+	{
+		if (!verifyfloat3(hpos[i]))
+			hpos[i] = make_float3(0.0f);
+		fprintf(fp, "v  %f %f %f\n", hpos[i].x, hpos[i].y, hpos[i].z);
+	}
+//	fprintf(fp, "}\n ");
+
+	fprintf(fp, "#normal_vectors\n");
+//	fprintf(fp, "%d,\n", pnum);
+	//vertex normals
+	cudaMemcpy(hpos, dnormal, pnum*sizeof(float3), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < pnum; i++)
+	{
+		if (!verifyfloat3(hpos[i]))
+			hpos[i] = make_float3(0.0f);
+		fprintf(fp, "vn  %f %f %f\n", hpos[i].x, hpos[i].y, hpos[i].z);
+	}
+//	fprintf(fp, "}\n ");
+	
+	fprintf(fp, "#face_indices\n");
+	//fprintf(fp, "%d,\n", indicesnum / 3);
+	//face indices.
+	static uint *hindices = new uint[MCedgeNum];
+	cudaMemcpy(hindices, dindices, indicesnum*sizeof(uint), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < indicesnum; i += 3)
+		fprintf(fp, "f  %d %d %d\n",  hindices[i]+1, hindices[i + 1]+1, hindices[i + 2]+1);	//obj indices from 1 !!!
+	//fprintf(fp, "}\n ");
+	
+//	fprintf(fp, "inside_vector <0,0,1> }\n ");
+//	fprintf(fp, "object{ watermesh material{%s_material} }\n ", objectname);
+
+	fclose(fp);
+}
+
 void cspray::outputColoredParticle(int frame, float3* dpos, float *dtemperature, int pnum)
 {
 	static float3 *hpos = new float3[parNumMax];
@@ -2600,7 +2703,7 @@ void cspray::solidmotion()			///////////////////////////////
 		cudaThreadSynchronize();
 
 		int blocknum = (int)ceil(((float)solidvertexnum) / threadnum);
-		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES || mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES) && mframe>0 && !bRunMCSolid)
+		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES || mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES /*|| mscene==SCENE_ALL*/)&& mframe>0 && !bRunMCSolid)
 			computeSolidVertex_k << <blocknum, threadnum >> >(solidvertex, solidvertexnum, rg, rg0, rm);
 	}
 }
@@ -2846,7 +2949,8 @@ void cspray::pouring()
 	if (mframe % 4 == 0 && pourNum != 0 && pourNum + parNumNow <= parNumMax)
 	{
 		int tpblocknum = max(1, (int)ceil(((float)pourNum) / threadnum));
-		//	printf("pournum=%d,parnumnow=%d,parnummax=%d,blocknum=%d", pourNum, parNumNow, parNumMax, tpblocknum );
+			//printf("pournum=%d,parnumnow=%d,parnummax=%d,blocknum=%d", pourNum, parNumNow, parNumMax, tpblocknum );
+			//getchar();
 		pouringwater << <tpblocknum, threadnum >> > (mParPos, mParVel, parmass, parflag, parTemperature, parLHeat, pargascontain, parNumNow,
 			dpourpos, dpourvel, TYPEFLUID, pourNum, randfloat, randfloatcnt, 0, posrandparam, velrandparam, defaultLiquidT, LiquidHeatTh);
 		cudaThreadSynchronize();

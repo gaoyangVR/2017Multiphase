@@ -31,7 +31,7 @@ void copyNXNYNZtoGPU(int nx, int ny, int nz)
 
 void copyNXNYNZtoGPU_MC(int nx, int ny, int nz)
 {
-	checkCudaErrors(cudaMemcpyToSymbol(NXMC, &nx, sizeof(int)));
+	checkCudaErrors(cudaMemcpyToSymbol(NXMC, &nx, sizeof(int))); 
 	checkCudaErrors(cudaMemcpyToSymbol(NYMC, &ny, sizeof(int)));
 	checkCudaErrors(cudaMemcpyToSymbol(NZMC, &nz, sizeof(int)));
 }
@@ -101,14 +101,16 @@ __device__ inline int clampidx(int i, int j, int k)
 	k = max(0, min(k, NZ - 1));
 	return (i*NZ*NY + j*NZ + k);
 }
+
+
 __device__ inline float trilinear(farray u, float x, float y, float z, int w, int h, int d)
 {
-	x = fmax(0.0f, fmin(x, w));
-	y = fmax(0.0f, fmin(y, h));
-	z = fmax(0.0f, fmin(z, d));
-	int i = fmin(x, w - 2);
-	int j = fmin(y, h - 2);
-	int k = fmin(z, d - 2);
+	x = fmaxf(0.0f, fminf(x, w));
+	y = fmaxf(0.0f, fminf(y, h));
+	z = fmaxf(0.0f, fminf(z, d));
+	int i = fminf(x, w - 2);
+	int j = fminf(y, h - 2);
+	int k = fminf(z, d - 2);
 
 	return (k + 1 - z)*((j + 1 - y)*((i + 1 - x)*u(i, j, k) + (x - i)*u(i + 1, j, k)) + (y - j)*((i + 1 - x)*u(i, j + 1, k) + (x - i)*u(i + 1, j + 1, k))) +
 		(z - k)*((j + 1 - y)*((i + 1 - x)*u(i, j, k + 1) + (x - i)*u(i + 1, j, k + 1)) + (y - j)*((i + 1 - x)*u(i, j + 1, k + 1) + (x - i)*u(i + 1, j + 1, k + 1)));
@@ -357,7 +359,7 @@ __global__ void addbuoyancyforce_vel(float velMax, float3 *pos, float3 *vel, cha
 		else if (parflag[idx] == TYPEAIRSOLO)
 			vel[idx].z -= dt*dparam.gravity.z *rate* buoyanceRateSolo;
 		else if (parflag[idx] == TYPESOLID)
-			vel[idx].z -= dt*dparam.gravity.z * 0.35f;//0.55f;
+		vel[idx].z += dt*dparam.gravity.z * 0.1f;//0.55f;
 		// 		else if(parflag[idx] == TYPESOLID && pos[idx].z <= dheight)			//	液面下固体粒子受浮力
 		// 			vel[idx] -= dt*dparam.gravity * 0.2f;
 	}
@@ -1027,7 +1029,7 @@ __global__ void calcHashD_MC(uint*   gridParticleHash,  // output
 {
 	uint index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	if (index >= numParticles) return;
-
+	
 	float3 p = pos[index];
 
 	// get address in grid
@@ -1553,7 +1555,7 @@ __global__ void genWaterDensfield_Gas(farray outdens, float3 *pos, char *parflag
 		float phi;
 		float h = dparam.cellsize.x / (NXMC / NX);
 		//todo: this is not quite right, r should be 0.5*samplespace, i.e. 0.25f/gn.
-		float r = 1.0f*h;
+		float r = 0.8f*h;
 		//get position
 		int i, j, k;
 		getijk(i, j, k, idx, NXMC + 1, NYMC + 1, NZMC + 1);
@@ -1620,7 +1622,8 @@ __global__ void genWaterDensfield_liquidAndGas(farray outdens, float3 *pos, char
 		float phi;
 		float h = dparam.cellsize.x / (NXMC / NX);
 		//todo: this is not quite right, r should be 0.5*samplespace, i.e. 0.25f/gn.
-		float r = 1.0f*h;
+		//float r = 1.0f*h;
+		float r = 0.25*h;
 		//get position
 		int i, j, k;
 		getijk(i, j, k, idx, NXMC + 1, NYMC + 1, NZMC + 1);
@@ -1696,9 +1699,9 @@ __global__ void genWaterDensfield_GY(farray outdens, float3 *pos, char *parflag,
 		float phi;
 		float h = dparam.cellsize.x / (NXMC / NX);
 		//todo: this is not quite right, r should be 0.5*samplespace, i.e. 0.25f/gn.
-		float r = 0.5f*h;
-		float thigh = 0.6;
-		float tlow = 0.4;
+		float r = 0.75f*h;
+		float thigh = 0.51;
+		float tlow = 0.49;
 		//get position
 		int i, j, k;
 		getijk(i, j, k, idx, NXMC + 1, NYMC + 1, NZMC + 1);
@@ -2751,7 +2754,7 @@ __global__ void genlevelset(farray lsfluid, farray lsair, charray mark, float3 *
 		getijk(i, j, k, idx, NX, NY, NZ);
 
 		float3 gpos = (make_float3(i, j, k) + make_float3(0.5f, 0.5f, 0.5f))*dparam.cellsize.x;
-		float mindisair = 2.5f*h, mindisfluid = 2.5f*h;
+		float mindisair = 2.5f*h, mindisfluid = 2.5f*h;	//2.5 cellsize
 		int level = 2;
 		for (int di = -level; di <= level; ++di) for (int dj = -level; dj <= level; ++dj) for (int dk = -level; dk <= level; ++dk)	//周围27个格子就行
 		{
@@ -2764,8 +2767,8 @@ __global__ void genlevelset(farray lsfluid, farray lsair, charray mark, float3 *
 		mindisfluid -= r;
 
 		lsfluid[idx] = mindisfluid;
-		lsair[idx] = mindisair - offset*h;	//todo: 这里略微向外扩张了一下气体的ls，避免气体粒子correctpos时向内收缩导到气泡体积的减小。注意：这个修正会导致markgrid的不对，因此流体mark会大一层，其流动会受很大影响
-		//lsair[idx] = mindisair;
+	//	lsair[idx] = mindisair - offset*h;	//todo: 这里略微向外扩张了一下气体的ls，避免气体粒子correctpos时向内收缩导到气泡体积的减小。注意：这个修正会导致markgrid的不对，因此流体mark会大一层，其流动会受很大影响
+		lsair[idx] = mindisair;
 	}
 }
 
@@ -3607,7 +3610,7 @@ __global__ void enforcesurfacetension_p(float3* ppos, float3 *pvel, char *pflag,
 	{
 		if (pflag[idx] == TYPESOLID/* || pflag[idx]==TYPEAIRSOLO*/ || pflag[idx] == TYPEFLUID)
 			return;
-		if (scene != SCENE_MELTANDBOIL&&scene != SCENE_MELTANDBOIL_HIGHRES /*&& scene!= SCENE_INTERACTION*/&& pflag[idx] == TYPEAIRSOLO)
+		if( (scene != SCENE_MELTANDBOIL&&scene != SCENE_MELTANDBOIL_HIGHRES && pflag[idx] == TYPEAIRSOLO) || ((scene != SCENE_ALL && pflag[idx] == TYPEAIRSOLO)))
 			return;
 
 		//1. compute the cell, and get the ls, get sf.
@@ -3757,7 +3760,7 @@ __global__ void sweepu_k_bubble(farray outux, farray outuy, farray outuz, farray
 			if ((mark(i, j, k) != sweepflag && mark(i - 1, j, k) != sweepflag))
 			for (int di = -1; di <= 1; di += 2) for (int dj = -1; dj <= 1; dj += 2) for (int dk = -1; dk <= 1; dk += 2)
 			{
-				if (j + dj<0 || j + dj>NY - 1 || k + dk<0 || k + dk >NZ - 1)
+				if (j + dj<0 || j + dj>NY - 1 || k + dk<0 || k + dk >NZ -1)
 					continue;
 				wx = -di*(ls(i, j, k) - ls(i - 1, j, k));
 				if (wx<0)
@@ -4206,7 +4209,7 @@ __global__ void verifySoloAirParticle(float3 *ppos, float3 *pvel, char *pflag, i
 			cnt += cntairparticle(ppos, pflag, getidx(i + di, j + dj, k + dk), gridstart, gridend, ipos, h);
 
 		float tol1 = -1.45f, tol2 = -0.5f;
-		if (scene == SCENE_MELTANDBOIL || scene == SCENE_MELTANDBOIL_HIGHRES)
+		if (scene == SCENE_MELTANDBOIL || scene == SCENE_MELTANDBOIL_HIGHRES || scene==SCENE_ALL)
 			tol1 = 0.05f, tol2 = -0.8f;
 		else if (scene == SCENE_INTERACTION)
 			tol1 = 0.2f, tol2 = -0.5f;
@@ -4506,7 +4509,7 @@ __global__ void computeAx_heat(farray ans, charray mark, farray x, int n, float 
 			float sum = (h*h / alpha / dt + 6.0f)*center;
 
 			//trick: 决定要不要让freeair参与计算
-			if (scene == SCENE_BOILING || scene == SCENE_BOILING_HIGHRES || scene == SCENE_MELTANDBOIL || scene == SCENE_MELTANDBOIL_HIGHRES)
+			if (scene == SCENE_BOILING || scene == SCENE_BOILING_HIGHRES || scene == SCENE_MELTANDBOIL || scene == SCENE_MELTANDBOIL_HIGHRES || scene ==SCENE_ALL)
 			{
 				sum -= ((mark(i + 1, j, k) == TYPEBOUNDARY || mark(i + 1, j, k) == TYPEVACUUM) ? center : x(i + 1, j, k));
 				sum -= ((mark(i, j + 1, k) == TYPEBOUNDARY || mark(i, j + 1, k) == TYPEVACUUM) ? center : x(i, j + 1, k));
@@ -4933,17 +4936,19 @@ __global__ void updateEmptyBubbles(float3 *pepos, float3 *pedir, float *peradius
 	int idx = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	if (idx<penum)
 	{
+		int airRscale = 2;
+		
 		float3 ipos = pepos[idx], idir = pedir[idx];
 		float iradius = peradius[idx];
-		float rthresholdleave = 2.0f*dparam.cellsize.x;	//todo:	//到此半径则转化成实际气体并离开固壁
+		float rthresholdleave = 1.0f*dparam.cellsize.x;	//todo:	//到此半径则转化成实际气体并离开固壁     控制气泡半径
 		float rthreshold = max(0.0f, iradius + 0.1f*dparam.cellsize.x);	//此次气泡最大半径，防止突然变大带来的不稳定
 		rthreshold = min(rthreshold, rthresholdleave);
 		int i, j, k;
 		getijkfrompos(i, j, k, ipos);
 
 		//收集需要管的范围内的气体含量，增大体积
-		float massorigin = dparam.waterrho * 4 / 3 * M_PI*(pow(iradius, 3));
-		float masscantake = dparam.waterrho * 4 / 3 * M_PI*(pow(rthreshold, 3) - pow(iradius, 3)), massadd = 0;	//todo
+		float massorigin = dparam.waterrho * 4 / 3 * M_PI*(pow(iradius, 3))*0.5;
+		float masscantake = dparam.waterrho * 4 / 3 * M_PI*(pow(rthreshold, 3) - pow(iradius, 3))*0.5, massadd = 0;	//todo
 
 		int range = 2;
 		for (int di = -range; di <= range &&masscantake>0; di++)	for (int dj = -range; dj <= range&&masscantake>0; dj++)	for (int dk = -range; dk <= range&&masscantake>0; dk++)

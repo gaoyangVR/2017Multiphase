@@ -126,7 +126,8 @@ enum SCENE{
 	SCENE_MELTANDBOIL,		//interact with big bubble
 	SCENE_MELTANDBOIL_HIGHRES,		//interact with big bubble
 	SCENE_HEATTRANSFER,
-	SCENE_CNT
+	SCENE_CNT,
+	SCENE_ALL
 };
 
 enum VELOCITYMODEL{

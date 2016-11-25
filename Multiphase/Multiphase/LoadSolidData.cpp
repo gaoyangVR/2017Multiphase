@@ -18,7 +18,7 @@ void cspray::readdata_solid(void)
 	if (mscene == SCENE_MELTANDBOIL_HIGHRES || mscene == SCENE_INTERACTION_HIGHRES)
 		dataFile.open("./PointCloud/bunny_4X.asc");
 	else
-		dataFile.open("./PointCloud/bunny.asc");
+		dataFile.open("./PointCloud/bunny_3X.asc");
 
 	if (!dataFile)
 	{
@@ -51,6 +51,7 @@ void cspray::readdata_solid(void)
 
 			(dataFile) >> SolpointPos[i][j];
 			dataFile.get();
+			
 		}
 	}
 	dataFile.close();

@@ -1,5 +1,5 @@
 #include "utility.h"
-
+#include "device_launch_parameters.h"
 void copyparamtoGPU(FlipConstant hparam);
 void copyNXNYNZtoGPU(int nx, int ny, int nz);
 void copyNXNYNZtoGPU_MC(int nx, int ny, int nz);

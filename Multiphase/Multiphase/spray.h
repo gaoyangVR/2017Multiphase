@@ -7,13 +7,13 @@
 
 //NX,NY,NZ用来控制仿真空间在三个方向上分别有几个cell
 //const int NX=256,NY=4,NZ=256;
-//const int NX=32,NY=32,NZ=48;
-//const int NX=64,NY=64,NZ=64;
-//const int NX = 96, NY = 96, NZ = 96;
-//const int NX=96,NY=64,NZ=96;
-//const int NX=128,NY=128,NZ=128;
-//  const int NX=48,NY=32,NZ=64;
- const int NX=32,NY=32,NZ=64;
+//const int NX=48,NY=48,NZ=48;  
+//const int NX=128,NY=128,NZ=128;	//meltingpour / freezing 
+//const int NX = 128, NY = 128, NZ = 96;  //boiling high resolution
+const int NX=96,NY=128,NZ=128;
+//const int NX=64	,NY=64,NZ=64;
+//const int NX=48,NY=32,NZ=64;  //interaction
+//const int NX=64,NY=48,NZ=64; //boiling / melting
 
 class cspray
 {
@@ -212,6 +212,7 @@ public:
 	//terrain相关的函数
 	myMesh mmesh;
 	void markgird_terrain();
+	void initBottomParticles_terrain(int3 mincell, int3 maxcell, float height[NX + 1][NY + 1]);
 
 	void ComputeTriangleHashSize(myMesh &mesh);
 	void hashTriangle_radix_q();
@@ -305,13 +306,18 @@ public:
 	void updateSeedCell();
 	int *dseedcell, seednum;
 
-	bool boutputpovray, bOutputColoredParticle;
+	bool boutputpovray, bOutputColoredParticle,boutputobj;
 	int outputframeDelta;		//控制每隔x帧输出一次
 	void outputPovRaywater(int frame, float3* dpos, float3 *dnormal, int pnum, uint *dindices, int indicesnum, const char* objectname);
 	void outputSoloBubblePovRay(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
 	void outputAirParticlePovRay(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
 	void outputEmptyBubblePovRay(int frame);
 	void outputColoredParticle(int frame, float3* dpos, float *ptemperature, int pnum);		//将粒子以sphere的格式输出，位置、颜色和半径。颜色使用mapColorBlue2Red函数按温度进行编码。
+	
+	void outputOBJwater(int frame, float3* dpos, float3 *dnormal, int pnum, uint *dindices, int indicesnum, const char* objectname);
+	void outputSoloBubbleOBJ(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
+	void outputAirParticleOBJ(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
+	void outputEmptyBubbleOBJ(int frame);
 
 	//流固耦合的接口，以后尽量加到这一块
 	void waterSolidSim();
@@ -348,6 +354,7 @@ public:
 	bool m_bCorrectFluidByAirLS;
 	float buoyanceRateAir, buoyanceRateSolo;
 	int m_beginFrame;
+	bool m_bBottomParticel;
 
 	int nInitSolPoint, Pointnum, nRealSolpoint;
 	double **SolpointPos;		//cpu数据
@@ -379,5 +386,7 @@ public:
 	uint *hgridstart, *hgridend;
 
 };
+
+
 
 #endif

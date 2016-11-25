@@ -54,6 +54,9 @@ void keyboard_func(unsigned char key, int x, int y)
 	case 'O': case 'o':
 		gspray.boutputpovray = !gspray.boutputpovray;
 		break;
+	case 'j': case 'J':
+		gspray.boutputobj = !gspray.boutputobj;
+		break;
 	case 'I': case 'i':
 		gspray.mRecordImage = !gspray.mRecordImage;
 		break;
@@ -63,7 +66,7 @@ void keyboard_func(unsigned char key, int x, int y)
 	case 'D': case 'd':
 		gspray.m_DistanceFuncMC = (gspray.m_DistanceFuncMC + 1) % 2;
 		break;
-	case 'G': case 'g':
+	case 'G': case 'g':	//	YLP gas on/off
 		gspray.m_bGenGas = !gspray.m_bGenGas;
 		break;
 	case 'U': case 'u':

@@ -21,6 +21,8 @@ public:
 	void initGL();
 	float3 mynormalize(float3 nor);
 
+	void LoadWithNor(const char* filename); ///////////
+
 public:
 	float3* m_hPoints;		//棋野割
 	float3* m_dPoints;		//棋野割
