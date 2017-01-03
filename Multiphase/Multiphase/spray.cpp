@@ -23,7 +23,7 @@ charray::charray()
 void cspray::initparam()
 {
 	//这里写经常需要改动的控制变量
-	mscene = SCENE_ALL;
+	mscene = SCENE_MELTINGPOUR;
 	readdata_solid();	//需要放在initparam之前，读取到固体点的个数
 
 	mpause = false;
@@ -269,13 +269,13 @@ void cspray::initparam()
 			sprintf(outputdir, "outputobj\\objmeltingpour\\");
 		simmode = SIMULATION_BUBBLE;
 		solidInitPos = make_float3(0.55f, 0.45f, -0.33f);				//固体位置
-		defaulttemperature = 279.15f;		//空气的温度
-		meltingpoint = 268.15f;
-		defaultSolidT = 260.15f, defaultLiquidT = 283.15f;
-		heatalphafluid = 0.015f, heatalphaair = 0.025f;		//传热速度
+		defaulttemperature = 273.15f;		//空气的温度
+		meltingpoint = 265.15f;
+		defaultSolidT = 263.15f, defaultLiquidT = 293.15f;
+		heatalphafluid = 0.01f, heatalphaair = 05.15f;		//传热速度
 		bounceVelParam = 1.3f, bouncePosParam = 1.0f;
-		temperatureMax_render = 283, temperatureMin_render = 261;
-		//alphaTempTrans = 1.0f;
+		temperatureMax_render = 283, temperatureMin_render = 263;
+		alphaTempTrans = 0.95f;
 	}
 	else if (mscene == SCENE_FREEZING)
 	{
@@ -572,7 +572,8 @@ void cspray::initparam()
 	//param
 	hparam.gnum = NX*NY*NZ;
 	hparam.gvnum = make_int3((NX + 1)*NY*NZ, NX*(NY + 1)*NZ, NX*NY*(NZ + 1));
-	hparam.dt = 0.003f;		//注意：pouring与时间步长有关
+	hparam.dt = 0.003f;		//timestep 原为67  注意：pouring与时间步长有关
+	//hparam.dt = 0.005;  //根据Nile 的程序修改   依据为mantaflow 2016.12.15.  
 	hparam.gmin = make_float3(0.0f);
 	hparam.gmax = hparam.cellsize.x * make_float3((float)NX, (float)NY, (float)NZ);		//x的长度总是1
 	hparam.waterrho = 1000.0f;
@@ -975,7 +976,7 @@ void cspray::SPHsimulate_SLCouple()
 	}
 }
 
-void cspray::bubblesim()////////////////////////////
+void cspray::bubblesim()////////////////////////////mainbody
 {
 	if (!mpause)
 	{
@@ -998,7 +999,7 @@ void cspray::bubblesim()////////////////////////////
 		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES) && mframe >= m_beginFrame)
 			pouringgas();
 		else
-			pouring();
+			pouring();		//pournum equal to 0 if there is no interaction
 
 		//temp
 		// 		if( mscene==SCENE_MELTANDBOIL && mframe==1 )
@@ -1047,7 +1048,7 @@ void cspray::bubblesim()////////////////////////////
 
 		//更新seed positions.
 		if (mframe > 800 && mscene == SCENE_BOILING)
-			updateSeedFrameDelta = 10;
+			updateSeedFrameDelta = 10;		//original 15
 		if (mframe%updateSeedFrameDelta == 0)
 			updateSeedCell();
 
@@ -1184,6 +1185,8 @@ void cspray::bubblesim()////////////////////////////
 		printTime(m_btimer, "MeltSolid&Freezing", time2);
 
 		printTime(m_btimer, "dynamics", time, timeaver, timeframe, TIME_TRANSITION);
+
+
 
 		//8. rendering. notice: 必须进行hash，否则删除粒子之后就不正确了。
 		if (mframe%outputframeDelta == 0)

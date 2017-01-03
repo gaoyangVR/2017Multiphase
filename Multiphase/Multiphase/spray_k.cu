@@ -16,6 +16,11 @@ texture<uint, 1, cudaReadModeElementType> edgeTex;
 texture<uint, 1, cudaReadModeElementType> triTex;
 texture<uint, 1, cudaReadModeElementType> numVertsTex;
 
+__device__ float racc = 0.;
+__device__ float wacc = 0.;
+__device__ float3 pacc;
+__device__ float sradiusInv;
+
 
 void copyparamtoGPU(FlipConstant hparam)
 {
@@ -1587,7 +1592,7 @@ __global__ void genWaterDensfield_Gas(farray outdens, float3 *pos, char *parflag
 	}
 }
 
-__device__ float3 sumcelldens_liquidAndGas(float& wsum, float3 gpos, float3 *pos, char *parflag, uint *gridstart, uint  *gridend, int gidx, float R)
+__device__ float3 sumcelldens_liquidAndGas(float& wsum, float3 gpos, float3 *pos, char *parflag, uint *gridstart, uint  *gridend, int gidx, float R, float sradiusInv, float radius, float racc,float wacc, float3 pacc)
 {
 	float3 res = make_float3(0.0f);
 	if (gridstart[gidx] == CELL_UNDEF)
@@ -1595,11 +1600,21 @@ __device__ float3 sumcelldens_liquidAndGas(float& wsum, float3 gpos, float3 *pos
 	uint start = gridstart[gidx];
 	uint end = gridend[gidx];
 	float dis, w;
+	//float r = R / 2.;
+	
 	for (uint p = start; p<end; ++p)
 	{
 		if (parflag[p] == TYPEAIR || parflag[p] == TYPEAIRSOLO || parflag[p] == TYPEFLUID)
 		{
 			dis = length(pos[p] - gpos);
+// 			{
+// 				float s = dot(pos[p] - gpos, pos[p] - gpos)*sradiusInv;//mantaflow
+// 				w = max(0., (1. - s));
+// 				wacc += w;
+// 				racc += radius * w;
+// 				pacc += pos[p] * w;
+// 				
+// 			}
 			if (dis<R)
 			{
 				w = R*R - dis*dis;
@@ -1609,6 +1624,7 @@ __device__ float3 sumcelldens_liquidAndGas(float& wsum, float3 gpos, float3 *pos
 			}
 		}
 	}
+	
 	return res;
 }
 
@@ -1622,11 +1638,19 @@ __global__ void genWaterDensfield_liquidAndGas(farray outdens, float3 *pos, char
 		float phi;
 		float h = dparam.cellsize.x / (NXMC / NX);
 		//todo: this is not quite right, r should be 0.5*samplespace, i.e. 0.25f/gn.
-		//float r = 1.0f*h;
-		float r = 0.25*h;
+		//float r = 2.5f*sqrt(3.)*1.01*0.5*h;		//mantaFlow flip03_gen 
+		float r = 0.5*h;
 		//get position
 		int i, j, k;
 		getijk(i, j, k, idx, NXMC + 1, NYMC + 1, NZMC + 1);
+
+		//mantaflow 里面的算法
+		//float racc, wacc;
+		//float3 pacc = make_float3(0.);
+// 		float phiv = r;
+//  		sradiusInv = 1. / (4. *r * r);
+//  		int radius = int(1. * r) + 1;
+//  		float3 gridPos = make_float3(i + 0.5, j + 0.5, k + 0.5)* h;
 
 		float3 p = make_float3(i, j, k)* h;	//网格的位置
 		float3 center = make_float3(0.0f);
@@ -1636,7 +1660,11 @@ __global__ void genWaterDensfield_liquidAndGas(farray outdens, float3 *pos, char
 		{
 			if (verifycellidx(i + di, j + dj, k + dk, NXMC, NYMC, NZMC))
 			{
-				center += sumcelldens_liquidAndGas(wsum, p, pos, parflag, gridstart, gridend, getidx(i + di, j + dj, k + dk, NXMC, NYMC, NZMC), h*rate);
+				center += sumcelldens_liquidAndGas(wsum, p, pos, parflag, gridstart, gridend, getidx(i + di, j + dj, k + dk, NXMC, NYMC, NZMC), h*rate, sradiusInv, r,racc,wacc,pacc);
+// 				printf("%f !!!!", pacc.x); /////////////////////////
+// 				racc /= wacc;
+// 				pacc /= wacc;
+// 				phiv = fabs(length(gridPos-pacc));
 			}
 		}
 		if (wsum>0)
@@ -1646,6 +1674,8 @@ __global__ void genWaterDensfield_liquidAndGas(farray outdens, float3 *pos, char
 		}
 		else
 			phi = -r;		//todo: this may change corresponding to grid resolution.
+
+	//	phi = phiv;		//mantaflow
 
 		if (i*j*k == 0 || i == NXMC || j == NYMC || k == NZMC)
 			phi = -1000.0f;
@@ -2720,7 +2750,7 @@ int scene)
 	return force;
 }
 
-__device__ void mindis_cell(float& mindisair, float& mindisfluid, float3 gpos, float3 *pos, char *parflag, float *pmass, uint *gridstart, uint  *gridend, int gidx)
+__device__ void mindis_cell(float& mindisair, float& mindisfluid, float3 gpos, float3 *pos, char *parflag, float *pmass, uint *gridstart, uint  *gridend, int gidx, float radius)
 {
 	if (gridstart[gidx] == CELL_UNDEF)
 		return;
@@ -2729,7 +2759,8 @@ __device__ void mindis_cell(float& mindisair, float& mindisfluid, float3 gpos, f
 	float dis;
 	for (uint p = start; p<end; ++p)
 	{
-		dis = length(pos[p] - gpos);// - getRfromMass( pmass[p] ) - 0.18f*dparam.cellsize.x;		//减掉半径，后面的数是较正一下
+		dis = length(pos[p] - gpos);//减掉半径，后面的数是较正一下  
+	//	dis = fabs(length(pos[p] - gpos))- radius;//  依据mantaflow	
 		if (parflag[p] == TYPEAIR || parflag[p] == TYPEAIRSOLO)//todo: 是不是加上SOLO的类型以防止ls随着标记变化的突变？
 			mindisair = (dis<mindisair) ? dis : mindisair;
 		else if (parflag[p] == TYPEFLUID || parflag[p] == TYPESOLID)
@@ -2748,22 +2779,24 @@ __global__ void genlevelset(farray lsfluid, farray lsair, charray mark, float3 *
 		//float ls;
 		float h = dparam.cellsize.x;
 		mark[idx] = TYPEVACUUM;
-		float r = 0.5f*h;		//0.36f*h;
+		float r = 0.5f*h;		//0.36f*h; 
+		//float r = 0.5*sqrt(3.)*1.01*2.5;		//修改为0.5*1.01 依据mantaflow
 		//get position
 		int i, j, k;
 		getijk(i, j, k, idx, NX, NY, NZ);
 
-		float3 gpos = (make_float3(i, j, k) + make_float3(0.5f, 0.5f, 0.5f))*dparam.cellsize.x;
+		float3 gpos = (make_float3(i, j, k) + make_float3(0.5f, 0.5f, 0.5f))*dparam.cellsize.x; // shifted by half cell
 		float mindisair = 2.5f*h, mindisfluid = 2.5f*h;	//2.5 cellsize
+		//float mindisair = r, mindisfluid = r;	//修正 mindis- 为 r 依据mantaflow
 		int level = 2;
 		for (int di = -level; di <= level; ++di) for (int dj = -level; dj <= level; ++dj) for (int dk = -level; dk <= level; ++dk)	//周围27个格子就行
 		{
 			if (verifycellidx(i + di, j + dj, k + dk))
 			{
-				mindis_cell(mindisair, mindisfluid, gpos, pos, parflag, pmass, gridstart, gridend, getidx(i + di, j + dj, k + dk));
+				mindis_cell(mindisair, mindisfluid, gpos, pos, parflag, pmass, gridstart, gridend, getidx(i + di, j + dj, k + dk), r);
 			}
 		}
-		mindisair -= r;
+		mindisair -= r;			//注释掉 依据mataflow
 		mindisfluid -= r;
 
 		lsfluid[idx] = mindisfluid;

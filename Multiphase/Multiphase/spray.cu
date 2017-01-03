@@ -11,6 +11,8 @@
 #include <cuda_runtime.h>
 # include < curand.h >
 #include "radixsort.cuh"
+#define ZLIB_WINAPI
+#include "zlib/zlib.h"  //zlib 库的配置 http://www.tuicool.com/articles/fuQbeez   + 使用 http://www.tuicool.com/articles/fuQbeez
 
 extern void printTime(bool btime, char* info, CTimer &time);
 
@@ -716,8 +718,8 @@ void cspray::initMC()
 
 	int rate = 2 * 2 * 2;
 	numVoxels = hparam.gnum * rate;		//NOTICE: *8 for double resolution
-	maxVerts = 4000000;// hparam.gnum*1*rate;
-	maxTriangles = 8000000;//hparam.gnum*2*rate;
+	maxVerts = 6000000;// hparam.gnum*1*rate;
+	maxTriangles = 12000000;//hparam.gnum*2*rate;
 
 	centertmp = make_float3(0);
 
@@ -952,7 +954,7 @@ void cspray::runMC_smooth(const char* objectname, char MCParType)
 		if (boutputpovray && mframe%outputframeDelta == 0)
 			outputPovRaywater(mframe / outputframeDelta, d_pos, d_normal, totalVerts, d_indices, totalIndices, objectname);
 		if (boutputobj && mframe%outputframeDelta == 0)
-			outputOBJwater(mframe / outputframeDelta, d_pos, d_normal, totalVerts, d_indices, totalIndices, objectname);
+			outputBOBJwater(mframe / outputframeDelta, d_pos, d_normal, totalVerts, d_indices, totalIndices, objectname);
 
 		if ((mscene == SCENE_INTERACTION || mscene == SCENE_INTERACTION_HIGHRES || mscene == SCENE_MELTANDBOIL || mscene == SCENE_MELTANDBOIL_HIGHRES ||mscene==SCENE_ALL) && objectname == "solid")
 		{
@@ -2367,6 +2369,69 @@ void cspray::outputOBJwater(int frame, float3* dpos, float3 *dnormal, int pnum, 
 //	fprintf(fp, "object{ watermesh material{%s_material} }\n ", objectname);
 
 	fclose(fp);
+}
+void cspray::outputBOBJwater(int frame, float3* dpos, float3 *dnormal, int pnum, uint *dindices, int indicesnum, const char* objectname)
+{
+	//filename
+	static char filename[100];
+	sprintf(filename, "%s%sBOBJdata\\fluidsurface_final_%04d.bobj.gz", outputdir, objectname, frame-1);	//所有的bobj文件都叫做fluidsurface， 序号从0开始
+	//FILE *fp = fopen(filename, "w");
+	gzFile gzf = gzopen(filename, "wb1"); // do some compression
+	if (gzf == NULL)
+	{
+		printf("cannot open bobj file waterBOBJdata for output here!!!\n");
+		mpause = true;
+		return;
+	}
+
+	//如果没有MC三角形，则只引用头文件且输出
+	if (pnum == 0)
+	{
+		gzclose(gzf);
+		return;
+	}
+	// vertex positions
+	static float3* hpos = new float3[maxVerts];
+	cudaMemcpy(hpos, dpos, pnum*sizeof(float3), cudaMemcpyDeviceToHost);
+	gzwrite(gzf, &pnum, sizeof(int));
+	for (int i = 0; i < pnum; i++)
+	{
+		if (!verifyfloat3(hpos[i]))
+			hpos[i] = make_float3(0.0f);
+
+		gzwrite(gzf, &hpos[i].x, sizeof(float));
+		gzwrite(gzf, &hpos[i].y, sizeof(float));
+		gzwrite(gzf, &hpos[i].z, sizeof(float));
+	}
+	
+	//vertex normals
+	cudaMemcpy(hpos, dnormal, pnum*sizeof(float3), cudaMemcpyDeviceToHost);
+	gzwrite(gzf, &pnum, sizeof(int));
+	for (int i = 0; i < pnum; i++)
+	{
+		if (!verifyfloat3(hpos[i]))
+			hpos[i] = make_float3(0.0f);
+
+		gzwrite(gzf, &hpos[i].x, sizeof(float)* 3);
+	}
+
+	//face indices.
+	static int *hindices = new int[MCedgeNum];
+	cudaMemcpy(hindices, dindices, indicesnum*sizeof(int), cudaMemcpyDeviceToHost);
+	gzwrite(gzf, &indicesnum, sizeof(int));
+	for (int i = 0; i < indicesnum; i =i+3)
+	//for (int j = 0; j < 3; j++)
+	{
+		int trip = hindices[i];
+		gzwrite(gzf, &trip, sizeof(int));
+		trip = hindices[i+1];
+		gzwrite(gzf, &trip, sizeof(int));
+		trip = hindices[i+2];
+		gzwrite(gzf, &trip, sizeof(int));
+		//fprintf(fp, "f  %d %d %d\n", hindices[i] + 1, hindices[i + 1] + 1, hindices[i + 2] + 1);	//obj indices from 1 !!!
+	}
+
+	gzclose(gzf);
 }
 
 void cspray::outputColoredParticle(int frame, float3* dpos, float *dtemperature, int pnum)

@@ -8,10 +8,10 @@
 //NX,NY,NZ用来控制仿真空间在三个方向上分别有几个cell
 //const int NX=256,NY=4,NZ=256;
 //const int NX=48,NY=48,NZ=48;  
-//const int NX=128,NY=128,NZ=128;	//meltingpour / freezing 
+//const int NX=128,NY=128,NZ=128;	//meltingpour / 
 //const int NX = 128, NY = 128, NZ = 96;  //boiling high resolution
-const int NX=96,NY=128,NZ=128;
-//const int NX=64	,NY=64,NZ=64;
+//const int NX=96,NY=128,NZ=128;
+const int NX=64	,NY=64,NZ=64;//freezing
 //const int NX=48,NY=32,NZ=64;  //interaction
 //const int NX=64,NY=48,NZ=64; //boiling / melting
 
@@ -318,6 +318,7 @@ public:
 	void outputSoloBubbleOBJ(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
 	void outputAirParticleOBJ(int frame, float3 *dpos, float *dmass, char *dflag, int pnum);
 	void outputEmptyBubbleOBJ(int frame);
+	void outputBOBJwater(int frame, float3* dpos, float3 *dnormal, int pnum, uint *dindices, int indicesnum, const char* objectname);//bobj.gz for blender
 
 	//流固耦合的接口，以后尽量加到这一块
 	void waterSolidSim();

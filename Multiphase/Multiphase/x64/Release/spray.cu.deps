@@ -700,3 +700,6 @@ C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include\curand.h
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include\cuda_runtime.h
 d:\2016newfluid\multiphase\multiphase\radixsort.cuh
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include\host_defines.h
+d:\2016newfluid\multiphase\multiphase\zlib/zlib.h
+d:\2016newfluid\multiphase\multiphase\zlib\zconf.h
+G:\vs2013Visual studio\VC\include\sys/types.h
